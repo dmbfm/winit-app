@@ -1,0 +1,12 @@
+[package]
+name = "winit-app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+winit = "0.29.14" 
+thiserror = "1.0.58"
+
+[dev-dependencies]
+wgpu = "0.19.3"
+pollster = "0.3.0"
