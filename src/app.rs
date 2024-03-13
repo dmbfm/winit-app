@@ -6,14 +6,38 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
-pub trait WinitApp {
-    fn init(&mut self, window: &Arc<Window>);
-    fn frame(&mut self, window: &Arc<Window>);
-    fn event(&mut self, window: &Arc<Window>, event: WindowEvent);
-    fn will_close(&mut self, window: &Arc<Window>);
+pub struct WinitContext<'a> {
+    window: &'a Arc<Window>,
+    should_quit: bool,
 }
 
-pub fn run(window_builder: WindowBuilder, mut app: impl WinitApp) -> Result<(), EventLoopError> {
+impl<'a> WinitContext<'a> {
+    pub fn new(window: &'a Arc<Window>) -> Self {
+        Self {
+            window,
+            should_quit: false,
+        }
+    }
+    pub fn window(&self) -> &Arc<Window> {
+        self.window
+    }
+
+    pub fn exit(&mut self) {
+        self.should_quit = true;
+    }
+}
+
+pub trait WinitApp {
+    fn init(&mut self, winit_ctx: &mut WinitContext);
+    fn frame(&mut self, winit_ctx: &mut WinitContext);
+    fn event(&mut self, winit_ctx: &mut WinitContext, event: WindowEvent);
+    fn will_close(&mut self, winit_ctx: &mut WinitContext);
+}
+
+pub fn run_app(
+    window_builder: WindowBuilder,
+    mut app: impl WinitApp,
+) -> Result<(), EventLoopError> {
     let event_loop = EventLoopBuilder::new().build()?;
     let window = window_builder.build(&event_loop)?;
     let window = Arc::new(window);
@@ -24,22 +48,36 @@ pub fn run(window_builder: WindowBuilder, mut app: impl WinitApp) -> Result<(), 
         if let Event::WindowEvent { event, .. } = event {
             match event {
                 WindowEvent::CloseRequested => {
-                    app.will_close(&window);
+                    let mut ctx = WinitContext::new(&window);
+                    app.will_close(&mut ctx);
                     target.exit();
                 }
 
                 WindowEvent::RedrawRequested => {
+                    let mut ctx = WinitContext::new(&window);
                     if first_frame {
-                        app.init(&window);
+                        app.init(&mut ctx);
+                        if ctx.should_quit {
+                            target.exit();
+                            return;
+                        }
                         first_frame = false;
                     }
 
-                    app.frame(&window);
+                    app.frame(&mut ctx);
+                    if ctx.should_quit {
+                        target.exit();
+                    };
+
                     window.request_redraw();
                 }
 
                 _ => {
-                    app.event(&window, event);
+                    let mut ctx = WinitContext::new(&window);
+                    app.event(&mut ctx, event);
+                    if ctx.should_quit {
+                        target.exit();
+                    }
                 }
             }
         }

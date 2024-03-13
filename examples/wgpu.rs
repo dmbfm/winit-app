@@ -1,11 +1,7 @@
 use std::sync::Arc;
 use winit_app::{
-    winit::{
-        dpi::PhysicalSize,
-        event::WindowEvent,
-        window::{Window, WindowBuilder},
-    },
-    WinitApp,
+    winit::{dpi::PhysicalSize, event::WindowEvent, window::WindowBuilder},
+    WinitApp, WinitContext,
 };
 
 #[derive(Debug, Default)]
@@ -88,12 +84,12 @@ impl State {
 }
 
 impl WinitApp for App {
-    fn init(&mut self, window: &Arc<Window>) {
-        self.state = Some(pollster::block_on(State::new(window.clone())));
+    fn init(&mut self, winit_ctx: &mut WinitContext) {
+        self.state = Some(pollster::block_on(State::new(winit_ctx.window().clone())));
         self.state.as_mut().unwrap().configure_surface();
     }
 
-    fn frame(&mut self, _window: &Arc<Window>) {
+    fn frame(&mut self, _: &mut WinitContext) {
         let Some(ref mut state) = self.state else {
             return;
         };
@@ -140,7 +136,7 @@ impl WinitApp for App {
         output.present();
     }
 
-    fn event(&mut self, _window: &Arc<Window>, event: winit::event::WindowEvent) {
+    fn event(&mut self, _: &mut WinitContext, event: winit::event::WindowEvent) {
         let Some(ref mut state) = self.state else {
             return;
         };
@@ -155,7 +151,7 @@ impl WinitApp for App {
         }
     }
 
-    fn will_close(&mut self, _window: &Arc<Window>) {
+    fn will_close(&mut self, _: &mut WinitContext) {
         println!("will close");
     }
 }
@@ -163,7 +159,7 @@ impl WinitApp for App {
 pub fn main() -> Result<(), impl std::error::Error> {
     println!("winit-app example");
 
-    winit_app::run(
+    winit_app::run_app(
         WindowBuilder::new().with_title("Winit App!"),
         App::default(),
     )

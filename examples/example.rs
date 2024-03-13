@@ -1,23 +1,19 @@
-use std::sync::Arc;
-use winit_app::{
-    winit::window::{Window, WindowBuilder},
-    WinitApp,
-};
+use winit_app::{winit::window::WindowBuilder, WinitApp};
 
 struct App;
 
 impl WinitApp for App {
-    fn init(&mut self, _window: &Arc<Window>) {
+    fn init(&mut self, _: &mut winit_app::WinitContext) {
         println!("init");
     }
 
-    fn frame(&mut self, _window: &Arc<Window>) {}
+    fn frame(&mut self, _: &mut winit_app::WinitContext) {}
 
-    fn event(&mut self, _window: &Arc<Window>, event: winit::event::WindowEvent) {
-        println!("event: {:#?}", event);
+    fn event(&mut self, _: &mut winit_app::WinitContext, event: winit::event::WindowEvent) {
+        println!("event = {:#?}", event);
     }
 
-    fn will_close(&mut self, _window: &Arc<Window>) {
+    fn will_close(&mut self, _: &mut winit_app::WinitContext) {
         println!("will close");
     }
 }
@@ -25,5 +21,5 @@ impl WinitApp for App {
 pub fn main() -> Result<(), impl std::error::Error> {
     println!("winit-app example");
 
-    winit_app::run(WindowBuilder::new().with_title("Winit App!"), App)
+    winit_app::run_app(WindowBuilder::new().with_title("Winit App!"), App)
 }
