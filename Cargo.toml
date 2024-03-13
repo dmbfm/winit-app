@@ -14,5 +14,5 @@ wgpu = "0.19.3"
 pollster = "0.3.0"
 
 [features]
-default = ["wgpu"]
+default = []
 wgpu = ["dep:wgpu", "dep:pollster"]
