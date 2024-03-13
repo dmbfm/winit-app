@@ -59,6 +59,14 @@ impl WgpuContext {
         })
     }
 
+    pub fn surface_size(&self) -> PhysicalSize<u32> {
+        self.size
+    }
+
+    pub fn surface_format(&self) -> wgpu::TextureFormat {
+        self.format
+    }
+
     pub fn resize_surface(&mut self, new_size: PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
