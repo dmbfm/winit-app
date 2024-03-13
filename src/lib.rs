@@ -10,3 +10,6 @@ mod wgpu_app;
 
 #[cfg(feature = "wgpu")]
 pub use wgpu_app::{run_wgpu_app, WgpuContext, WinitWgpuApp};
+
+#[cfg(feature = "wgpu")]
+pub use wgpu;
