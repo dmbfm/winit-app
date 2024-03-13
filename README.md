@@ -32,12 +32,12 @@ pub fn main() -> Result<(), impl std::error::Error> {
 }
 ```
 
-# wgpu
+# `wgpu` feature
 
 If the `wgpu` feature is enabled, you can use the `run_wgpu_app` function and
 the `WinitWgpuApp` trait to run a winit application with all the basic `wgpu` boilerplate
 taken care of:
-```
+```rust
 pub fn main() -> Result<(), impl std::error::Error> {
     use winit_app::{
         run_wgpu_app, winit::window::WindowBuilder, WgpuContext, WinitAppError, WinitContext,
