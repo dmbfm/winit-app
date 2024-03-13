@@ -28,10 +28,17 @@ impl<'a> WinitContext<'a> {
 }
 
 pub trait WinitApp {
-    fn init(&mut self, winit_ctx: &mut WinitContext);
     fn frame(&mut self, winit_ctx: &mut WinitContext);
-    fn event(&mut self, winit_ctx: &mut WinitContext, event: WindowEvent);
-    fn will_close(&mut self, winit_ctx: &mut WinitContext);
+    fn init(&mut self, winit_ctx: &mut WinitContext) {
+        let _ = winit_ctx;
+    }
+    fn event(&mut self, winit_ctx: &mut WinitContext, event: WindowEvent) {
+        let _ = winit_ctx;
+        let _ = event;
+    }
+    fn will_close(&mut self, winit_ctx: &mut WinitContext) {
+        let _ = winit_ctx;
+    }
 }
 
 pub fn run_app(

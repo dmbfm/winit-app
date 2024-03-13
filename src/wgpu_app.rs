@@ -1,7 +1,5 @@
-#![allow(unused, dead_code)]
 use crate::{WinitApp, WinitContext};
 use std::sync::Arc;
-use thiserror::*;
 use winit::{
     dpi::PhysicalSize,
     error::EventLoopError,
@@ -92,21 +90,36 @@ impl WgpuContext {
 }
 
 pub trait WinitWgpuApp {
-    fn init(&mut self, winit_ctx: &mut WinitContext, wgpu_ctx: &mut WgpuContext);
-    fn init_error(&mut self, error: &crate::WinitAppError);
     fn frame(
         &mut self,
         winit_ctx: &mut WinitContext,
-        gpu_ctx: &mut WgpuContext,
+        wgpu_ctx: &mut WgpuContext,
         surface_view: &wgpu::TextureView,
     );
+
+    fn init(&mut self, winit_ctx: &mut WinitContext, wgpu_ctx: &mut WgpuContext) {
+        let _ = winit_ctx;
+        let _ = wgpu_ctx;
+    }
+
+    fn init_error(&mut self, error: &crate::WinitAppError) {
+        let _ = error;
+    }
+
     fn event(
         &mut self,
         winit_ctx: &mut WinitContext,
         wgpu_ctx: &mut WgpuContext,
         event: WindowEvent,
-    );
-    fn will_close(&mut self, winit_ctx: &mut WinitContext, ctx: &mut WgpuContext);
+    ) {
+        let _ = winit_ctx;
+        let _ = wgpu_ctx;
+        let _ = event;
+    }
+    fn will_close(&mut self, winit_ctx: &mut WinitContext, wgpu_ctx: &mut WgpuContext) {
+        let _ = winit_ctx;
+        let _ = wgpu_ctx;
+    }
 }
 
 struct App<A: WinitWgpuApp> {
@@ -164,7 +177,7 @@ impl<A: WinitWgpuApp> WinitApp for App<A> {
 
 pub fn run_wgpu_app(
     window_builder: WindowBuilder,
-    mut app: impl WinitWgpuApp,
+    app: impl WinitWgpuApp,
 ) -> Result<(), EventLoopError> {
     crate::run_app(window_builder, App { app, ctx: None })
 }
