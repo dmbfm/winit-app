@@ -2,7 +2,7 @@
 
 A simple convenience wrapper around `winit`.
 
-# Basic Example
+## Basic Example
 
 ```rust
 use winit_app::{winit::window::WindowBuilder, WinitApp};
@@ -32,7 +32,7 @@ pub fn main() -> Result<(), impl std::error::Error> {
 }
 ```
 
-# `wgpu` feature
+## `wgpu` feature
 
 If the `wgpu` feature is enabled, you can use the `run_wgpu_app` function and
 the `WinitWgpuApp` trait to run a winit application with all the basic `wgpu` boilerplate
