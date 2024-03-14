@@ -1,8 +1,8 @@
 #[cfg(feature = "wgpu")]
 pub fn main() -> Result<(), impl std::error::Error> {
     use winit_app::{
-        run_wgpu_app, winit::window::WindowBuilder, WgpuContext, WinitAppError, WinitContext,
-        WinitWgpuApp,
+        run_wgpu_app_ex, winit::window::WindowBuilder, WgpuContext, WgpuContextDescriptor,
+        WinitAppError, WinitContext, WinitWgpuApp,
     };
 
     struct App;
@@ -32,9 +32,9 @@ pub fn main() -> Result<(), impl std::error::Error> {
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(wgpu::Color {
-                                r: 0.541f64.powf(2.2),
-                                g: 0.714f64.powf(2.2),
-                                b: 0.675f64.powf(2.2),
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
                                 a: 1.0,
                             }),
                             store: wgpu::StoreOp::Store,
@@ -60,7 +60,14 @@ pub fn main() -> Result<(), impl std::error::Error> {
         fn will_close(&mut self, _: &mut WinitContext, _: &mut WgpuContext) {}
     }
 
-    run_wgpu_app(WindowBuilder::new().with_title("wgpu window"), App)
+    run_wgpu_app_ex(
+        WindowBuilder::new().with_title("wgpu window"),
+        WgpuContextDescriptor {
+            preferred_surface_format: Some(winit_app::PreferredSurfaceFormat::Srgb),
+            ..Default::default()
+        },
+        App,
+    )
 }
 
 #[cfg(not(feature = "wgpu"))]

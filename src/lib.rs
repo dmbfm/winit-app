@@ -9,7 +9,10 @@ pub use winit;
 mod wgpu_app;
 
 #[cfg(feature = "wgpu")]
-pub use wgpu_app::{run_wgpu_app, WgpuContext, WinitWgpuApp};
+pub use wgpu_app::{
+    run_wgpu_app, run_wgpu_app_ex, PreferredSurfaceFormat, WgpuContext, WgpuContextDescriptor,
+    WinitWgpuApp,
+};
 
 #[cfg(feature = "wgpu")]
 pub use wgpu;

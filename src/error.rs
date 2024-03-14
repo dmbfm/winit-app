@@ -24,6 +24,10 @@ pub enum WinitAppError {
     #[cfg(feature = "wgpu")]
     #[error("wgpu error: failed to request adapter")]
     WgpuRequestAdapterError,
+
+    #[cfg(feature = "wgpu")]
+    #[error("wgpu error: failed to create surface with preferred format")]
+    WgpuPreferredSurfaceFormatError,
 }
 
 impl From<EventLoopError> for WinitAppError {

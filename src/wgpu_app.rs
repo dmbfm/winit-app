@@ -1,4 +1,4 @@
-use crate::{WinitApp, WinitContext};
+use crate::{WinitApp, WinitAppError, WinitContext};
 use std::sync::Arc;
 use winit::{
     dpi::PhysicalSize,
@@ -7,25 +7,43 @@ use winit::{
     window::{Window, WindowBuilder},
 };
 
+#[derive(Debug, Default, Clone)]
+pub enum PreferredSurfaceFormat {
+    #[default]
+    Srgb,
+    NonSrgb,
+    Format(wgpu::TextureFormat),
+    Formats(Vec<wgpu::TextureFormat>),
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct WgpuContextDescriptor {
+    pub preferred_surface_format: Option<PreferredSurfaceFormat>,
+    pub power_preference: Option<wgpu::PowerPreference>,
+    pub required_features: Option<wgpu::Features>,
+    pub required_limits: Option<wgpu::Limits>,
+}
+
 pub struct WgpuContext {
-    pub instance: wgpu::Instance,
-    pub adapter: wgpu::Adapter,
-    pub device: wgpu::Device,
-    pub queue: wgpu::Queue,
+    pub device: Arc<wgpu::Device>,
+    pub queue: Arc<wgpu::Queue>,
     pub surface: wgpu::Surface<'static>,
     size: PhysicalSize<u32>,
     format: wgpu::TextureFormat,
 }
 
 impl WgpuContext {
-    pub async fn new(window: Arc<Window>) -> Result<Self, crate::error::WinitAppError> {
+    pub async fn new(
+        window: Arc<Window>,
+        desc: WgpuContextDescriptor,
+    ) -> Result<Self, crate::error::WinitAppError> {
         let size = window.inner_size();
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
         let surface = instance.create_surface(window)?;
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: Default::default(),
+                power_preference: desc.power_preference.unwrap_or_default(),
                 force_fallback_adapter: false,
                 compatible_surface: Some(&surface),
             })
@@ -36,22 +54,23 @@ impl WgpuContext {
             .request_device(
                 &wgpu::DeviceDescriptor {
                     label: None,
-                    required_features: wgpu::Features::default(),
-                    required_limits: wgpu::Limits::default(),
+                    required_features: desc.required_features.unwrap_or_default(),
+                    required_limits: desc.required_limits.unwrap_or_default(),
                 },
                 None,
             )
             .await?;
 
         let caps = surface.get_capabilities(&adapter);
-        let format = caps.formats[0];
+
+        let format = caps
+            .get_format(desc.preferred_surface_format.unwrap_or_default())
+            .ok_or(WinitAppError::WgpuPreferredSurfaceFormatError)?;
 
         Ok(Self {
-            instance,
-            adapter,
-            device,
+            device: Arc::new(device),
+            queue: Arc::new(queue),
             surface,
-            queue,
             size,
             format,
         })
@@ -125,11 +144,15 @@ pub trait WinitWgpuApp {
 struct App<A: WinitWgpuApp> {
     app: A,
     ctx: Option<WgpuContext>,
+    desc: WgpuContextDescriptor,
 }
 
 impl<A: WinitWgpuApp> WinitApp for App<A> {
     fn init(&mut self, winit_ctx: &mut WinitContext) {
-        match pollster::block_on(WgpuContext::new(winit_ctx.window().clone())) {
+        match pollster::block_on(WgpuContext::new(
+            winit_ctx.window().clone(),
+            self.desc.clone(),
+        )) {
             Ok(ctx) => {
                 self.ctx = Some(ctx);
                 self.ctx.as_mut().unwrap().configure_surface();
@@ -175,9 +198,83 @@ impl<A: WinitWgpuApp> WinitApp for App<A> {
     }
 }
 
+trait SurfaceCapabilitiesEx {
+    fn get_first_srgb(&self) -> Option<wgpu::TextureFormat>;
+    fn get_first_non_srgb(&self) -> Option<wgpu::TextureFormat>;
+    fn get_format_or_first(&self, format: wgpu::TextureFormat) -> wgpu::TextureFormat;
+    fn get_one_of_formats_or_first(&self, formats: &[wgpu::TextureFormat]) -> wgpu::TextureFormat;
+    fn has_format(&self, format: wgpu::TextureFormat) -> bool;
+    fn get_format(&self, preferred: PreferredSurfaceFormat) -> Option<wgpu::TextureFormat>;
+}
+
+impl SurfaceCapabilitiesEx for wgpu::SurfaceCapabilities {
+    fn get_first_srgb(&self) -> Option<wgpu::TextureFormat> {
+        self.formats.iter().find(|f| f.is_srgb()).copied()
+    }
+
+    fn get_first_non_srgb(&self) -> Option<wgpu::TextureFormat> {
+        self.formats.iter().find(|f| !f.is_srgb()).copied()
+    }
+
+    fn has_format(&self, format: wgpu::TextureFormat) -> bool {
+        self.formats.contains(&format)
+    }
+
+    fn get_format_or_first(&self, format: wgpu::TextureFormat) -> wgpu::TextureFormat {
+        self.formats
+            .iter()
+            .find(|f| **f == format)
+            .copied()
+            .unwrap_or(self.formats[0])
+    }
+
+    fn get_one_of_formats_or_first(&self, formats: &[wgpu::TextureFormat]) -> wgpu::TextureFormat {
+        for format in formats.iter() {
+            if self.has_format(*format) {
+                return *format;
+            }
+        }
+
+        self.formats[0]
+    }
+
+    fn get_format(&self, preferred: PreferredSurfaceFormat) -> Option<wgpu::TextureFormat> {
+        match preferred {
+            PreferredSurfaceFormat::Srgb => self.get_first_srgb(),
+            PreferredSurfaceFormat::NonSrgb => self.get_first_non_srgb(),
+            PreferredSurfaceFormat::Format(f) => Some(self.get_format_or_first(f)),
+            PreferredSurfaceFormat::Formats(formats) => {
+                Some(self.get_one_of_formats_or_first(&formats))
+            }
+        }
+    }
+}
+
 pub fn run_wgpu_app(
     window_builder: WindowBuilder,
     app: impl WinitWgpuApp,
 ) -> Result<(), EventLoopError> {
-    crate::run_app(window_builder, App { app, ctx: None })
+    crate::run_app(
+        window_builder,
+        App {
+            app,
+            ctx: None,
+            desc: WgpuContextDescriptor::default(),
+        },
+    )
+}
+
+pub fn run_wgpu_app_ex(
+    window_builder: WindowBuilder,
+    desc: WgpuContextDescriptor,
+    app: impl WinitWgpuApp,
+) -> Result<(), EventLoopError> {
+    crate::run_app(
+        window_builder,
+        App {
+            app,
+            ctx: None,
+            desc,
+        },
+    )
 }
